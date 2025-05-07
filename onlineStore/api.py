@@ -1,5 +1,5 @@
 from ninja import NinjaAPI, Schema, FilterSchema
-from .models import Category, Product
+from .models import Category, Product, WishList, Order, OrderProduct
 from typing import List
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
@@ -7,6 +7,7 @@ from django.contrib.auth import login, logout, authenticate
 from ninja.security import django_auth
 from ninja.errors import HttpError
 from ninja import Query
+from datetime import datetime
 
 
 api = NinjaAPI(csrf=True)
@@ -156,4 +157,85 @@ def get_search_description_product(request, description: str = Query(description
 def get_search_price_product(request, min_price: int = Query(description = "Минимальная цена"), max_price: int = Query(description = "Максимальная цена")):
     return Product.objects.filter(price__gte = min_price).filter(price__lte = max_price)
 
+# Заказы и корзины
 
+class WishListOut(Schema):
+    id: int
+    product: ProductOut
+    count: int
+
+
+class WishListIn(Schema):
+    product_id: int
+    count: int
+
+
+class OrderOut(Schema):
+    id: int
+    user: UserOut
+    datetime: datetime
+    status: str
+    total: int
+
+
+class OrderProductOut(Schema):
+    order_id: int
+    product: ProductOut
+    count: int
+    price: int
+
+
+
+@api.get("wishlists/", auth=django_auth, response=List[WishListOut], summary="Показать корзину")
+def get_wishlists(request):
+    wishlists = WishList.objects.filter(user=request.user)
+    return wishlists
+
+@api.post("wishlist/add", auth=django_auth, summary="Добавить товар в корзину")
+def post_wishlist_add(request, playload: WishListIn):
+    user = request.user
+    product = get_object_or_404(Product, id=playload.product_id)
+    if WishList.objects.filter(user=user, product=product):
+        wishlist = get_object_or_404(WishList, user=user, product=product)
+        wishlist.count = wishlist.count + playload.count
+        wishlist.save()
+    else:
+        count = playload.count
+        WishList.objects.create(user=user, product=product, count = count)
+    return {"succes": True, "message": "Товар успешно добавлен в корзину"}
+
+@api.post("wishlist/remove", auth=django_auth, summary="Очистить корзину")
+def post_wishlist_remove(request):
+    wishlist = WishList.objects.filter(user=request.user)
+    for i in wishlist:
+        i.delete()
+    return {"succes": True, "message": "Корзина успешно очищена"}
+
+@api.get("orders/", response=List[OrderOut], summary="Показать заказы")
+def get_orders(request):
+    return Order.objects.all()
+
+@api.get("order/get", response=List[OrderProductOut], summary="Показать заказ")
+def get_order(request, id:int = Query(description="id заказа")):
+    order = get_object_or_404(Order, id=id)
+    return order.products.all()
+
+@api.post("order/create", auth=django_auth, summary="Создать заказ")
+def post_order_create(request):
+    if not WishList.objects.filter(user=request.user).exists():
+        return {"succes": False, "message": "Пустая корзина"}
+    wishlist = WishList.objects.filter(user=request.user)
+    order = Order.objects.create(user=request.user, status="Новый")
+    for i in wishlist:
+        OrderProduct.objects.create(order=order, product=i.product, count=i.count, price=i.product.price)
+        i.delete()
+    order.total = order.get_total_sum()
+    order.save()
+    return {"succes": True, "message": "Заказ успешно создан"}
+
+@api.put("order/status", summary="Изменить статус")
+def put_order_status(request, id:int = Query(description="id заказа"), status:str = Query(description="Статус")):
+    order = get_object_or_404(Order, id=id)
+    order.status = status
+    order.save()
+    return {"succes": True, "message": "Статус успешно изменен"}
