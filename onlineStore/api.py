@@ -1,13 +1,14 @@
-from ninja import NinjaAPI, Schema, FilterSchema
+from ninja import NinjaAPI, Schema
 from .models import Category, Product, WishList, Order, OrderProduct
 from typing import List
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
-from django.contrib.auth import login, logout, authenticate
-from ninja.security import django_auth
+from django.contrib.auth import authenticate
+from django.contrib.auth.decorators import permission_required
 from ninja.errors import HttpError
 from ninja import Query
 from datetime import datetime
+from ninja.security import HttpBasicAuth
 
 
 api = NinjaAPI(csrf=True)
@@ -36,28 +37,28 @@ class ProductOut(Schema):
     price: int
     description: str
 
-@api.post("categories/", summary="Добавить категорию")
+@api.post("category/add/", summary="Добавить категорию")
 def create_category(request, playload: CategoryIn):
-    Category.objects.create(**playload.dict())
-    return {"success": True, "message": "Категория успешно добавлена"}
+    category = Category.objects.create(**playload.dict())
+    return {"success": True, "message": f"Категория успешно добавлена. Код категории: {category.id}"}
 
-@api.get("categories/", response=List[CategoryOut], summary="Показать категории")
+@api.get("categories/view/", response=List[CategoryOut], summary="Показать категории")
 def get_categories(request):
     categories = Category.objects.all()
     return categories
 
-@api.get("categories/{slug}", response=CategoryOut, summary="Показать категорию")
+@api.get("category/view/", response=CategoryOut, summary="Показать категорию")
 def get_category(request, slug: str):
     category = get_object_or_404(Category, slug=slug)
     return category
 
-@api.delete("categories/{slug}", summary="Удалить категорию")
+@api.delete("category/delete/", summary="Удалить категорию")
 def delete_category(request, slug: str):
     category = get_object_or_404(Category, slug=slug)
     category.delete()
     return {"success": True, "message": "Категория успешно удалена"}
 
-@api.get("categories/{slug}/products", response=List[ProductOut], summary="Показать продукты категории")
+@api.get("category/products/", response=List[ProductOut], summary="Показать продукты категории")
 def get_category_products(request, slug: str):
     category = get_object_or_404(Category, slug=slug)
     products = Product.objects.filter(category=category)
@@ -68,23 +69,23 @@ def get_products(request):
     products = Product.objects.all()
     return products
 
-@api.post("products/", summary="Добавить продукт")
+@api.post("product/add/", summary="Добавить продукт")
 def create_product(request, playload: ProductIn):
     product = Product.objects.create(**playload.dict())
-    return "Продукт успешно добавлен"
+    return {"success": True, "message": f"Ародукт успешно добавлен. Код продукта: {product.id}"}
 
-@api.get("products/{id}", response=ProductOut, summary="Показать продукт")
+@api.get("product/", response=ProductOut, summary="Показать продукт")
 def get_product(request, id: int):
     product = get_object_or_404(Product, id=id)
     return product
 
-@api.delete("products/{id}", summary="Удалить продукт")
+@api.delete("product/delete/", summary="Удалить продукт")
 def delete_product(request, id: int):
     product = get_object_or_404(Product, id=id)
     product.delete()
     return {"success": True, "message": "Продукт успешно удален"}
 
-@api.patch("products/{id}", summary="Обновить продукт")
+@api.patch("product/update/", summary="Обновить продукт")
 def patch_product(request, id: int, playload: ProductIn):
     product = get_object_or_404(Product, id=id)
     for attr, value in playload.dict().items():
@@ -93,6 +94,11 @@ def patch_product(request, id: int, playload: ProductIn):
     return {"success": True, "message": "Продукт успешно обновлен"}
 
 # Пользователи и фильтры
+
+class BasicAuth(HttpBasicAuth):
+    def authenticate(self, request, username, password):
+        user = authenticate(username=username, password=password)
+        return user
 
 class UserLogin(Schema):
     username: str
@@ -113,47 +119,34 @@ class UserOut(Schema):
     last_name: str
 
 
-@api.post("login/", summary="Вход")
-def login_system(request, playload: UserLogin):
-    user = authenticate(username=playload.username, password=playload.password)
-    if user is not None:
-        login(request, user)
-        return {"succes": True, "message": "Успешный вход"}
-    return{"succes": False, "message": "Вход не выполнен"}
-
-@api.post("logout/", summary="Выход", auth=django_auth)
-def logout_system(request):
-    logout(request)
-    return {"succes": True, "message": "Успешный выход"}
-
-@api.post("cheak_login/", summary="Проверка входа", auth=django_auth)
+@api.post("auth/check/", summary="Проверка входа", auth=BasicAuth())
 def cheak_login_system(request):
-    if request.user.is_authenticated:
-        return {"succes": True, "message": f"Вход выполнен username - {request.user.username}"}
+    if request.auth:
+        return {"succes": True, "message": f"Вход выполнен username - {request.auth.username}"}
 
-@api.post("registration/", summary="Регистрация")
+@api.post("auth/registration/", summary="Регистрация")
 def registration_system(request, playload: UserRegistration):
     if User.objects.filter(username=playload.username).exists():
-        return {"succes": False, "message": "Пользователь уже зарегистрирован"}
+        return HttpError(409, "Пользователь уже зарегистрирован!")
     User.objects.create(**playload.dict())
     return {"succes": True, "message": "Пользователь успешно зарегистрирован"}
 
-@api.get("users/", summary="Показать пользователей", response=List[UserOut], auth=django_auth)
+@api.get("aurh/users/", summary="Показать пользователей", response=List[UserOut], auth=BasicAuth())
 def get_users(request):
-    if request.user.has_perm('auth.view_user'):
-        users = User.objects.all()
-        return users
-    raise HttpError(501, "Не достаточно прав")
+    if request.auth.has_perm('auth.view_user'):
+        print(request.user)
+        return User.objects.all()
+    raise HttpError(403, "Не достаточно прав")
 
-@api.get("search_name_product/", response=List[ProductOut], summary="Поиск продуктов по названию")
+@api.get("products/search/name/", response=List[ProductOut], summary="Поиск продуктов по названию")
 def get_search_name_product(request, title: str = Query(description = "Название продукта")):
-    return Product.objects.filter(title__icontains = title)
+    return Product.objects.filter(title__iregex = title)
 
-@api.get("search_description_product/", response=List[ProductOut], summary="Поиск продуктов по описанию")
+@api.get("products/search/description/", response=List[ProductOut], summary="Поиск продуктов по описанию")
 def get_search_description_product(request, description: str = Query(description = "Описание")):
-    return Product.objects.filter(description__icontains = description)
+    return Product.objects.filter(description__iregex = description)
 
-@api.get("search_price_product/", response=List[ProductOut], summary="Поиск продуктов по цене")
+@api.get("products/search/price/", response=List[ProductOut], summary="Поиск продуктов по цене")
 def get_search_price_product(request, min_price: int = Query(description = "Минимальная цена"), max_price: int = Query(description = "Максимальная цена")):
     return Product.objects.filter(price__gte = min_price).filter(price__lte = max_price)
 
@@ -186,12 +179,12 @@ class OrderProductOut(Schema):
 
 
 
-@api.get("wishlists/", auth=django_auth, response=List[WishListOut], summary="Показать корзину")
+@api.get("wishlist/", auth=BasicAuth(), response=List[WishListOut], summary="Показать корзину")
 def get_wishlists(request):
     wishlists = WishList.objects.filter(user=request.user)
     return wishlists
 
-@api.post("wishlist/add", auth=django_auth, summary="Добавить товар в корзину")
+@api.post("wishlist/add/", auth=BasicAuth(), summary="Добавить товар в корзину")
 def post_wishlist_add(request, playload: WishListIn):
     user = request.user
     product = get_object_or_404(Product, id=playload.product_id)
@@ -204,7 +197,7 @@ def post_wishlist_add(request, playload: WishListIn):
         WishList.objects.create(user=user, product=product, count = count)
     return {"succes": True, "message": "Товар успешно добавлен в корзину"}
 
-@api.post("wishlist/remove", auth=django_auth, summary="Очистить корзину")
+@api.post("wishlist/remove/", auth=BasicAuth(), summary="Очистить корзину")
 def post_wishlist_remove(request):
     wishlist = WishList.objects.filter(user=request.user)
     for i in wishlist:
@@ -215,15 +208,15 @@ def post_wishlist_remove(request):
 def get_orders(request):
     return Order.objects.all()
 
-@api.get("order/get", response=List[OrderProductOut], summary="Показать заказ")
+@api.get("order/", response=List[OrderProductOut], summary="Показать заказ")
 def get_order(request, id:int = Query(description="id заказа")):
     order = get_object_or_404(Order, id=id)
     return order.products.all()
 
-@api.post("order/create", auth=django_auth, summary="Создать заказ")
+@api.post("order/create/", auth=BasicAuth(), summary="Создать заказ")
 def post_order_create(request):
     if not WishList.objects.filter(user=request.user).exists():
-        return {"succes": False, "message": "Пустая корзина"}
+        return HttpError('400', "Корзина пустая!")
     wishlist = WishList.objects.filter(user=request.user)
     order = Order.objects.create(user=request.user, status="Новый")
     for i in wishlist:
@@ -233,7 +226,7 @@ def post_order_create(request):
     order.save()
     return {"succes": True, "message": "Заказ успешно создан"}
 
-@api.put("order/status", summary="Изменить статус")
+@api.put("order/status/update/", summary="Изменить статус")
 def put_order_status(request, id:int = Query(description="id заказа"), status:str = Query(description="Статус")):
     order = get_object_or_404(Order, id=id)
     order.status = status
