@@ -72,7 +72,7 @@ def get_products(request):
 @api.post("product/add/", summary="Добавить продукт")
 def create_product(request, playload: ProductIn):
     product = Product.objects.create(**playload.dict())
-    return {"success": True, "message": f"Ародукт успешно добавлен. Код продукта: {product.id}"}
+    return {"success": True, "message": f"Продукт успешно добавлен. Код продукта: {product.id}"}
 
 @api.get("product/", response=ProductOut, summary="Показать продукт")
 def get_product(request, id: int):
@@ -118,8 +118,7 @@ class UserOut(Schema):
     first_name: str
     last_name: str
 
-
-@api.post("auth/check/", summary="Проверка входа", auth=BasicAuth())
+@api.get("auth/check/", summary="Проверка входа", auth=BasicAuth())
 def cheak_login_system(request):
     if request.auth:
         return {"succes": True, "message": f"Вход выполнен username - {request.auth.username}"}
@@ -127,7 +126,7 @@ def cheak_login_system(request):
 @api.post("auth/registration/", summary="Регистрация")
 def registration_system(request, playload: UserRegistration):
     if User.objects.filter(username=playload.username).exists():
-        return HttpError(409, "Пользователь уже зарегистрирован!")
+        return api.create_response(request, {"message": "Пользователь уже зарегистрирован!"}, status=409)
     User.objects.create(**playload.dict())
     return {"succes": True, "message": "Пользователь успешно зарегистрирован"}
 
@@ -176,7 +175,6 @@ class OrderProductOut(Schema):
     product: ProductOut
     count: int
     price: int
-
 
 
 @api.get("wishlist/", auth=BasicAuth(), response=List[WishListOut], summary="Показать корзину")

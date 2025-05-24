@@ -1,0 +1,166 @@
+[
+{
+    "model": "onlineStore.category",
+    "pk": 8,
+    "fields": {
+        "title": "Мебель",
+        "slug": "mebel"
+    }
+},
+{
+    "model": "onlineStore.product",
+    "pk": 10,
+    "fields": {
+        "title": "Стол",
+        "category": 8,
+        "price": 100,
+        "description": "Нет",
+        "image": ""
+    }
+},
+{
+    "model": "onlineStore.product",
+    "pk": 11,
+    "fields": {
+        "title": "Стул",
+        "category": 8,
+        "price": 50,
+        "description": "Просто стул",
+        "image": ""
+    }
+},
+{
+    "model": "onlineStore.order",
+    "pk": 6,
+    "fields": {
+        "user": 2,
+        "datetime": "2025-05-24T12:21:55.966Z",
+        "status": "В работе",
+        "total": 200
+    }
+},
+{
+    "model": "onlineStore.order",
+    "pk": 7,
+    "fields": {
+        "user": 3,
+        "datetime": "2025-05-24T12:22:31.752Z",
+        "status": "Оплачен",
+        "total": 200
+    }
+},
+{
+    "model": "onlineStore.orderproduct",
+    "pk": 10,
+    "fields": {
+        "order": 6,
+        "product": 11,
+        "count": 4,
+        "price": 50
+    }
+},
+{
+    "model": "onlineStore.orderproduct",
+    "pk": 11,
+    "fields": {
+        "order": 7,
+        "product": 10,
+        "count": 1,
+        "price": 100
+    }
+},
+{
+    "model": "onlineStore.orderproduct",
+    "pk": 12,
+    "fields": {
+        "order": 7,
+        "product": 11,
+        "count": 2,
+        "price": 50
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 1,
+    "fields": {
+        "password": "pbkdf2_sha256$870000$Uc8GeqRzoQmI9p9G8luF5Z$a/bU9u4TFi1lgipzmiaC3TwMMsg8AljbUruox5vyf7g=",
+        "last_login": "2025-05-24T09:05:59.319Z",
+        "is_superuser": true,
+        "username": "maksim",
+        "first_name": "Степанов",
+        "last_name": "Максим",
+        "email": "maks@mail.ru",
+        "is_staff": true,
+        "is_active": true,
+        "date_joined": "2025-03-17T07:49:23Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 2,
+    "fields": {
+        "password": "pbkdf2_sha256$870000$SRXBgKk0ARFyfEB21Rb22q$7MnHRJjzkzmnq3jHeQgo6rb03nrUZygtVPTPV3gYDKA=",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "lexa",
+        "first_name": "Алексей",
+        "last_name": "Дроздов",
+        "email": "",
+        "is_staff": true,
+        "is_active": true,
+        "date_joined": "2025-05-03T13:29:16Z",
+        "groups": [
+            1
+        ],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 3,
+    "fields": {
+        "password": "pbkdf2_sha256$870000$ZJdhDFrFNGPhc2XfA9aQLU$PIro+iHEHp5HnARDy0/EuztUDzwrHwnwwOH/hvw9I74=",
+        "last_login": "2025-05-04T07:11:13Z",
+        "is_superuser": false,
+        "username": "alina",
+        "first_name": "Алина",
+        "last_name": "Семенюк",
+        "email": "",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2025-05-04T06:44:44Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 4,
+    "fields": {
+        "password": "danil1234",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "danil",
+        "first_name": "Даниил",
+        "last_name": "",
+        "email": "",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2025-05-24T10:05:06.648Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.group",
+    "pk": 1,
+    "fields": {
+        "name": "Менеджер",
+        "permissions": [
+            16
+        ]
+    }
+}
+]
