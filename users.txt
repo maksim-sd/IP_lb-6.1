@@ -1,0 +1,11 @@
+admin:
+maksim
+maks1234
+
+manager:
+lexa
+lexa1234
+
+manager:
+alina
+alin1234

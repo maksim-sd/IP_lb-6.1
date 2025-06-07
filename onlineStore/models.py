@@ -10,6 +10,7 @@ class Category(models.Model):
         return self.title
     
     class Meta:
+        unique_together = (('slug'),)
         verbose_name = "Категория"
         verbose_name_plural = "Категории"
 
